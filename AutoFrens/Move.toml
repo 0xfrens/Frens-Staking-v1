@@ -1,0 +1,10 @@
+[package]
+name = "AutoFren"
+version = "0.0.1"
+
+[dependencies]
+AptosFramework = { git = "https://github.com/aptos-labs/aptos-core.git", subdir = "aptos-move/framework/aptos-framework/", rev = "devnet" }
+MasterFren = { local= "../MasterFren" }
+
+[addresses]
+MasterFrenDepolyer = "0x523fdc336019440410e087aae6332ca1ce8ed927adb2c00f0c488bb71ab5b918"

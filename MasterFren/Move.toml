@@ -1,0 +1,9 @@
+[package]
+name = 'MasterFren'
+version = '1.0.0'
+
+[dependencies]
+AptosFramework = { git = "https://github.com/aptos-labs/aptos-core.git", subdir = "aptos-move/framework/aptos-framework/", rev = "83641d3f083762f31700060e5e95fbb1cbc28bf0" }
+[addresses]
+MasterFrenDepolyer = "0x523fdc336019440410e087aae6332ca1ce8ed927adb2c00f0c488bb71ab5b918"
+MasterFrenResourceAccount = "0x912bb9c9e18dcbc26b62278517f016b05059f8afa116267dc4fad91b4078f640"
