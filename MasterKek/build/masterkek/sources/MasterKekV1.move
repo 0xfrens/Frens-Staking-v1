@@ -1,4 +1,4 @@
-module MasterFrenDepolyer::KekMasterFrenV1 {
+module MasterFrenDepolyer::MasterKekV1 {
     use std::signer;
     use std::string::utf8;
     use std::type_info::{Self, TypeInfo};
@@ -7,6 +7,7 @@ module MasterFrenDepolyer::KekMasterFrenV1 {
     use aptos_framework::coin::{Self, MintCapability, FreezeCapability, BurnCapability};
     use aptos_framework::timestamp;
     use aptos_framework::account::{Self, SignerCapability};
+
     // use std::debug;    // For debug
 
     /// When user is not admin.
@@ -33,7 +34,7 @@ module MasterFrenDepolyer::KekMasterFrenV1 {
         burn: BurnCapability<KEK>,
     }
 
-    /**
+      /**
      * KEK mint & burn
      */
     public entry fun mint_KEK(
@@ -59,7 +60,7 @@ module MasterFrenDepolyer::KekMasterFrenV1 {
         coin::burn(coins, coin_b)
     }
 
-    // events
+ // events
     struct Events<phantom X> has key {
         add_event: event::EventHandle<CoinMeta<X>>,
         set_event: event::EventHandle<CoinMeta<X>>,
@@ -126,8 +127,9 @@ module MasterFrenDepolyer::KekMasterFrenV1 {
         account::create_signer_with_capability(signer_cap)
     }
 
+
     // initialize
-    fun init_module(admin: &signer) acquires MasterFrenData, LPInfo {
+    fun init_module(admin: &signer){
         // create resource account
         let (resource_account, capability) = account::create_resource_account(admin, x"CF");
         // init KEK Coin
@@ -135,6 +137,9 @@ module MasterFrenDepolyer::KekMasterFrenV1 {
             coin::initialize<KEK>(admin, utf8(b"Kek Token"), utf8(b"KEK"), 8, true);
         move_to(&resource_account, Caps { direct_mint: true, mint: coin_m, freeze: coin_f, burn: coin_b });
         register_coin<KEK>(&resource_account);
+    
+        
+        
         // MasterFrenData
         move_to(&resource_account, MasterFrenData {
             signer_cap: capability,
@@ -152,7 +157,7 @@ module MasterFrenDepolyer::KekMasterFrenV1 {
             lp_list: vector::empty()
         });
         // KEK staking
-        add<KEK>(admin, 1000);
+        //add<KEK>(admin, 1000);
     }
 
     // user should call this first, for approve KEK 
@@ -166,8 +171,7 @@ module MasterFrenDepolyer::KekMasterFrenV1 {
             coin::register<X>(account);
         };
     }
-
-    fun get_multiplier(
+        fun get_multiplier(
         from: u64,
         to: u64,
         bonus_multiplier: u64
@@ -498,422 +502,5 @@ module MasterFrenDepolyer::KekMasterFrenV1 {
     public fun get_lp_list(): vector<TypeInfo> acquires LPInfo {
         let lp_info = borrow_global<LPInfo>(RESOURCE_ACCOUNT_ADDRESS);
         lp_info.lp_list
-    }
-
-    #[test_only]
-    use aptos_framework::genesis;
-    #[test_only]
-    use aptos_framework::account::create_account_for_test;
-    #[test_only]
-    const INIT_COIN:u64 = 100000000000000000;
-    #[test_only]
-    const TEST_ERROR:u64 = 10000;
-    #[test_only]
-    struct LPCoin1 has store {}
-    #[test_only]
-    struct LPCoin2 has store {}
-    #[test_only]
-    struct CapsTest<phantom X> has key {
-        mint: MintCapability<X>,
-        freeze: FreezeCapability<X>,
-        burn: BurnCapability<X>,
-    }
-
-    #[test_only]
-    public fun test_init(creator: &signer, someone_else: &signer) acquires MasterFrenData, LPInfo, Caps {
-        genesis::setup();
-        create_account_for_test(signer::address_of(creator));
-        create_account_for_test(signer::address_of(someone_else));
-        {
-            init_module(creator);
-        };
-        {
-            let mc_data = borrow_global_mut<MasterFrenData>(RESOURCE_ACCOUNT_ADDRESS);
-            mc_data.start_timestamp = 0;
-        };
-        // init LPCoin
-        {
-            let (coin_b, coin_f, coin_m) =
-                coin::initialize<LPCoin1>(creator, utf8(b"LPCoin1"), utf8(b"LPCoin1"), 6, true);
-            register_coin<LPCoin1>(someone_else);
-            let coins = coin::mint<LPCoin1>(INIT_COIN, &coin_m);
-            coin::deposit(signer::address_of(someone_else), coins);
-            move_to(creator, CapsTest<LPCoin1> { mint: coin_m, freeze: coin_f, burn: coin_b });
-        };
-        {
-            let (coin_b, coin_f, coin_m) =
-                coin::initialize<LPCoin2>(creator, utf8(b"LPCoin2"), utf8(b"LPCoin2"), 6, true);
-            register_coin<LPCoin2>(someone_else);
-            let coins = coin::mint<LPCoin2>(INIT_COIN, &coin_m);
-            coin::deposit(signer::address_of(someone_else), coins);
-            move_to(creator, CapsTest<LPCoin2> { mint: coin_m, freeze: coin_f, burn: coin_b });
-        };
-        {
-            let caps = borrow_global<Caps>(RESOURCE_ACCOUNT_ADDRESS);
-            register_coin<KEK>(someone_else);
-            let coins = coin::mint<KEK>(INIT_COIN, &caps.mint);
-            coin::deposit(signer::address_of(someone_else), coins);
-        }
-    }
-
-    #[test_only]
-    public fun test_init_another(creator: &signer, someone_else: &signer, another_one: &signer) acquires MasterFrenData, LPInfo, Caps {
-        genesis::setup();
-        create_account_for_test(signer::address_of(creator));
-        create_account_for_test(signer::address_of(someone_else));
-        create_account_for_test(signer::address_of(another_one));
-        {
-            init_module(creator);
-        };
-        {
-            let mc_data = borrow_global_mut<MasterFrenData>(RESOURCE_ACCOUNT_ADDRESS);
-            mc_data.start_timestamp = 0;
-        };
-        // init LPCoin
-        {
-            let (coin_b, coin_f, coin_m) =
-                coin::initialize<LPCoin1>(creator, utf8(b"LPCoin1"), utf8(b"LPCoin1"), 6, true);
-            register_coin<LPCoin1>(someone_else);
-            let coins = coin::mint<LPCoin1>(INIT_COIN, &coin_m);
-            coin::deposit(signer::address_of(someone_else), coins);
-            register_coin<LPCoin1>(another_one);
-            let coins = coin::mint<LPCoin1>(INIT_COIN, &coin_m);
-            coin::deposit(signer::address_of(another_one), coins);
-            move_to(creator, CapsTest<LPCoin1> { mint: coin_m, freeze: coin_f, burn: coin_b });
-        };
-        {
-            let (coin_b, coin_f, coin_m) =
-                coin::initialize<LPCoin2>(creator, utf8(b"LPCoin2"), utf8(b"LPCoin2"), 6, true);
-            register_coin<LPCoin2>(someone_else);
-            let coins = coin::mint<LPCoin2>(INIT_COIN, &coin_m);
-            coin::deposit(signer::address_of(someone_else), coins);
-            register_coin<LPCoin2>(another_one);
-            let coins = coin::mint<LPCoin2>(INIT_COIN, &coin_m);
-            coin::deposit(signer::address_of(another_one), coins);
-            move_to(creator, CapsTest<LPCoin2> { mint: coin_m, freeze: coin_f, burn: coin_b });
-        };
-        {
-            let caps = borrow_global<Caps>(RESOURCE_ACCOUNT_ADDRESS);
-            register_coin<KEK>(someone_else);
-            let coins = coin::mint<KEK>(INIT_COIN, &caps.mint);
-            coin::deposit(signer::address_of(someone_else), coins);
-            register_coin<KEK>(another_one);
-            let coins = coin::mint<KEK>(INIT_COIN, &caps.mint);
-            coin::deposit(signer::address_of(another_one), coins);
-        }
-    }
-
-    #[test(creator = @MasterFrenDepolyer, someone_else = @0x11)]
-    public entry fun test_deposit_1(creator: &signer, someone_else: &signer)
-            acquires MasterFrenData, LPInfo, PoolInfo, UserInfo, Caps, Events {
-        test_init(creator, someone_else);
-        let bonus_multiplier;
-        let per_second_KEK;
-        {
-            let mc_data = borrow_global<MasterFrenData>(RESOURCE_ACCOUNT_ADDRESS);
-            bonus_multiplier = mc_data.bonus_multiplier;
-            per_second_KEK = mc_data.per_second_KEK;
-        };
-
-        add<LPCoin1>(creator, 500);    // 500/(500+1000) = 1/3 reward
-        deposit<LPCoin1>(someone_else, 1000000);
-
-        // 1111 seconds pass
-        timestamp::fast_forward_seconds(1111);
-        deposit<LPCoin1>(someone_else, 0);
-        assert!(coin::balance<KEK>(signer::address_of(someone_else)) == INIT_COIN + bonus_multiplier * (per_second_KEK as u64) * 1111 / 3 * 9 / 10, TEST_ERROR);
-    }
-
-    #[test(creator = @MasterFrenDepolyer, someone_else = @0x11)]
-    public entry fun test_deposit_2(creator: &signer, someone_else: &signer)
-            acquires MasterFrenData, LPInfo, PoolInfo, UserInfo, Caps, Events {
-        test_init(creator, someone_else);
-        let bonus_multiplier;
-        let per_second_KEK;
-        {
-            let mc_data = borrow_global<MasterFrenData>(RESOURCE_ACCOUNT_ADDRESS);
-            bonus_multiplier = mc_data.bonus_multiplier;
-            per_second_KEK = mc_data.per_second_KEK;
-        };
-
-        add<LPCoin1>(creator, 500);    // 1/4
-        add<LPCoin2>(creator, 500);    // 1/4
-        deposit<LPCoin1>(someone_else, 123456);
-        deposit<LPCoin2>(someone_else, 111111);
-
-        // 1111 seconds pass
-        timestamp::fast_forward_seconds(1111);
-        deposit<LPCoin2>(someone_else, 0);
-        assert!(coin::balance<KEK>(signer::address_of(someone_else)) == INIT_COIN + bonus_multiplier * (per_second_KEK as u64) * 1111 / 4 * 9 / 10
-                || coin::balance<KEK>(signer::address_of(someone_else)) == INIT_COIN + bonus_multiplier * (per_second_KEK as u64) * 1111 / 4 * 9 / 10 - 1,
-                TEST_ERROR);
-        deposit<LPCoin1>(someone_else, 0);
-        assert!(coin::balance<KEK>(signer::address_of(someone_else)) == INIT_COIN + bonus_multiplier * (per_second_KEK as u64) * 1111 / 4 * 9 / 10 * 2
-                || coin::balance<KEK>(signer::address_of(someone_else)) == INIT_COIN + (bonus_multiplier * (per_second_KEK as u64) * 1111 / 4 * 9 / 10 - 1) * 2,
-                TEST_ERROR);
-    }
-
-    #[test(creator = @MasterFrenDepolyer, someone_else = @0x11)]
-    public entry fun test_withdraw(creator: &signer, someone_else: &signer)
-            acquires MasterFrenData, LPInfo, PoolInfo, UserInfo, Caps, Events {
-        test_init(creator, someone_else);
-        let bonus_multiplier;
-        let per_second_KEK;
-        {
-            let mc_data = borrow_global<MasterFrenData>(RESOURCE_ACCOUNT_ADDRESS);
-            bonus_multiplier = mc_data.bonus_multiplier;
-            per_second_KEK = mc_data.per_second_KEK;
-        };
-
-        add<LPCoin1>(creator, 500);    // 1/4
-        add<LPCoin2>(creator, 500);    // 1/4
-        deposit<LPCoin1>(someone_else, 123456);
-        deposit<LPCoin2>(someone_else, 111111);
-
-        // 1111 seconds pass
-        timestamp::fast_forward_seconds(1111);
-
-        withdraw<LPCoin1>(someone_else, 123456);
-        withdraw<LPCoin2>(someone_else, 111111);
-        assert!(coin::balance<KEK>(signer::address_of(someone_else)) == INIT_COIN + bonus_multiplier * (per_second_KEK as u64) * 1111 / 4 * 9 / 10* 2
-                || coin::balance<KEK>(signer::address_of(someone_else)) == INIT_COIN + (bonus_multiplier * (per_second_KEK as u64) * 1111 / 4* 9 / 10 - 1) * 2,
-                TEST_ERROR);
-        assert!(coin::balance<LPCoin1>(signer::address_of(someone_else)) == INIT_COIN, TEST_ERROR);
-        assert!(coin::balance<LPCoin2>(signer::address_of(someone_else)) == INIT_COIN, TEST_ERROR);
-    }
-
-    #[test(creator = @MasterFrenDepolyer, someone_else = @0x11, another_one = @0x12)]
-    public entry fun test_multiple_user(creator: &signer, someone_else: &signer, another_one: &signer)
-            acquires MasterFrenData, LPInfo, PoolInfo, UserInfo, Caps, Events {
-        test_init_another(creator, someone_else, another_one);
-        let bonus_multiplier;
-        let per_second_KEK;
-        {
-            let mc_data = borrow_global<MasterFrenData>(RESOURCE_ACCOUNT_ADDRESS);
-            bonus_multiplier = mc_data.bonus_multiplier;
-            per_second_KEK = mc_data.per_second_KEK;
-        };
-
-        add<LPCoin1>(creator, 500);    // 1/4
-        add<LPCoin2>(creator, 500);    // 1/4
-        deposit<LPCoin1>(someone_else, 123456);
-        deposit<LPCoin2>(someone_else, 111111);
-        deposit<LPCoin1>(another_one, 123456);
-        deposit<LPCoin2>(another_one, 111111);
-
-        // 1111 seconds pass
-        timestamp::fast_forward_seconds(1111);
-
-        withdraw<LPCoin1>(someone_else, 123456);
-        withdraw<LPCoin2>(someone_else, 111111);
-        assert!(coin::balance<KEK>(signer::address_of(someone_else)) == INIT_COIN + bonus_multiplier * (per_second_KEK as u64) * 1111 / 4 * 9 / 10 / 2 * 2
-                || coin::balance<KEK>(signer::address_of(someone_else)) == INIT_COIN + (bonus_multiplier * (per_second_KEK as u64) * 1111 / 4* 9 / 10 - 1) / 2 * 2,
-                TEST_ERROR);
-        assert!(coin::balance<LPCoin1>(signer::address_of(someone_else)) == INIT_COIN, TEST_ERROR);
-        assert!(coin::balance<LPCoin2>(signer::address_of(someone_else)) == INIT_COIN, TEST_ERROR);
-    }
-
-    #[test(creator = @MasterFrenDepolyer, someone_else = @0x11, another_one = @0x12)]
-    public entry fun test_multiple_user_2(creator: &signer, someone_else: &signer, another_one: &signer)
-            acquires MasterFrenData, LPInfo, PoolInfo, UserInfo, Caps, Events {
-        test_init_another(creator, someone_else, another_one);
-        let bonus_multiplier;
-        let per_second_KEK;
-        {
-            let mc_data = borrow_global<MasterFrenData>(RESOURCE_ACCOUNT_ADDRESS);
-            bonus_multiplier = mc_data.bonus_multiplier;
-            per_second_KEK = mc_data.per_second_KEK;
-        };
-
-        add<LPCoin1>(creator, 500);    // 1/4
-        add<LPCoin2>(creator, 500);    // 1/4
-        deposit<LPCoin1>(someone_else, 100000);
-        deposit<LPCoin2>(someone_else, 100000);
-        // 1000 seconds pass
-        timestamp::fast_forward_seconds(1000);
-        deposit<LPCoin1>(another_one, 100000);
-        deposit<LPCoin2>(another_one, 100000);
-        // 1000 seconds pass
-        timestamp::fast_forward_seconds(1000);
-
-        deposit<LPCoin1>(someone_else, 0);
-        deposit<LPCoin2>(someone_else, 0);
-        assert!(coin::balance<KEK>(signer::address_of(someone_else))
-                    == INIT_COIN + bonus_multiplier * (per_second_KEK as u64) * 1000 / 4 * 9 / 10 * 2
-                    + bonus_multiplier * (per_second_KEK as u64) * 1000 / 4 * 9 / 10,
-                TEST_ERROR);
-
-        let pending1 = pending_KEK<LPCoin1>(signer::address_of(another_one));
-        let pending2 = pending_KEK<LPCoin2>(signer::address_of(another_one));
-        assert!(pending1 == bonus_multiplier * (per_second_KEK as u64) * 1000 / 4 * 9 / 10 / 2,
-                TEST_ERROR);
-        assert!(pending2 == bonus_multiplier * (per_second_KEK as u64) * 1000 / 4 * 9 / 10 / 2,
-                TEST_ERROR);
-
-        deposit<LPCoin1>(another_one, 0);
-        deposit<LPCoin2>(another_one, 0);
-        assert!(coin::balance<KEK>(signer::address_of(another_one))
-                    == INIT_COIN + bonus_multiplier * (per_second_KEK as u64) * 1000 / 4 * 9 / 10,
-                TEST_ERROR);
-    }
-
-    #[test(creator = @MasterFrenDepolyer, someone_else = @0x11, another_one = @0x12)]
-    public entry fun test_multiple_user_3(creator: &signer, someone_else: &signer, another_one: &signer)
-            acquires MasterFrenData, LPInfo, PoolInfo, UserInfo, Caps, Events {
-        test_init_another(creator, someone_else, another_one);
-        let amount = 100000;
-        let bonus_multiplier;
-        let per_second_KEK;
-        {
-            let mc_data = borrow_global<MasterFrenData>(RESOURCE_ACCOUNT_ADDRESS);
-            bonus_multiplier = mc_data.bonus_multiplier;
-            per_second_KEK = mc_data.per_second_KEK;
-        };
-
-        add<LPCoin1>(creator, 500);    // 1/4
-        add<LPCoin2>(creator, 500);    // 1/4
-        deposit<KEK>(someone_else, amount);
-        deposit<KEK>(another_one, amount);
-        // 1000 seconds pass
-        timestamp::fast_forward_seconds(1000);
-        deposit<KEK>(someone_else, amount);
-        deposit<KEK>(another_one, amount);
-
-        assert!(coin::balance<KEK>(signer::address_of(someone_else))
-                    == INIT_COIN - 2 * amount + bonus_multiplier * (per_second_KEK as u64) * 1000 / 4 * 9 / 10,
-                TEST_ERROR);
-        assert!(coin::balance<KEK>(signer::address_of(another_one))
-                    == INIT_COIN - 2 * amount + bonus_multiplier * (per_second_KEK as u64) * 1000 / 4 * 9 / 10,
-                TEST_ERROR);
-
-        // 1000 seconds pass
-        timestamp::fast_forward_seconds(1000);
-        deposit<KEK>(someone_else, amount);
-        deposit<KEK>(another_one, amount);
-        // 1000 seconds pass
-        timestamp::fast_forward_seconds(1000);
-        withdraw<KEK>(someone_else, amount * 3);
-        withdraw<KEK>(another_one, amount * 3);
-
-        let pending1 = pending_KEK<KEK>(signer::address_of(someone_else));
-        let pending2 = pending_KEK<KEK>(signer::address_of(another_one));
-        assert!(pending1 == 0, TEST_ERROR);
-        assert!(pending2 == 0, TEST_ERROR);
-
-        assert!(coin::balance<KEK>(signer::address_of(someone_else))
-                    == INIT_COIN + bonus_multiplier * (per_second_KEK as u64) * 3000 / 4 * 9 / 10,
-                TEST_ERROR);
-        assert!(coin::balance<KEK>(signer::address_of(another_one))
-                    == INIT_COIN + bonus_multiplier * (per_second_KEK as u64) * 3000 / 4 * 9 / 10,
-                TEST_ERROR);
-    }
-
-    #[test(creator = @MasterFrenDepolyer, someone_else = @0x11)]
-    public entry fun test_emergency_withdraw(creator: &signer, someone_else: &signer)
-            acquires MasterFrenData, LPInfo, PoolInfo, UserInfo, Caps, Events {
-        test_init(creator, someone_else);
-
-        add<LPCoin1>(creator, 500);    // 1/4
-        add<LPCoin2>(creator, 500);    // 1/4
-        deposit<LPCoin1>(someone_else, 123456);
-        deposit<LPCoin2>(someone_else, 111111);
-
-        // 1111 seconds pass
-        timestamp::fast_forward_seconds(1111);
-
-        emergency_withdraw<LPCoin1>(someone_else);
-        emergency_withdraw<LPCoin2>(someone_else);
-        assert!(coin::balance<LPCoin1>(signer::address_of(someone_else)) == INIT_COIN, TEST_ERROR);
-        assert!(coin::balance<LPCoin2>(signer::address_of(someone_else)) == INIT_COIN, TEST_ERROR);
-    }
-
-    #[test(creator = @MasterFrenDepolyer, someone_else = @0x11)]
-    public entry fun test_staking(creator: &signer, someone_else: &signer)
-            acquires MasterFrenData, LPInfo, PoolInfo, UserInfo, Caps, Events {
-        test_init(creator, someone_else);
-        let bonus_multiplier;
-        let per_second_KEK;
-        {
-            let mc_data = borrow_global<MasterFrenData>(RESOURCE_ACCOUNT_ADDRESS);
-            bonus_multiplier = mc_data.bonus_multiplier;
-            per_second_KEK = mc_data.per_second_KEK;
-        };
-
-        add<LPCoin1>(creator, 500);    // 1/4
-        add<LPCoin2>(creator, 500);    // 1/4
-        enter_staking(someone_else, 100000);
-        assert!(coin::balance<KEK>(signer::address_of(someone_else)) ==
-                INIT_COIN - 100000,
-                TEST_ERROR);
-
-        // 1111 seconds pass
-        timestamp::fast_forward_seconds(1111);
-        leave_staking(someone_else, 0);
-        assert!(coin::balance<KEK>(signer::address_of(someone_else)) ==
-                INIT_COIN - 100000 + bonus_multiplier * (per_second_KEK as u64) * 1111 * 9 / 10 / 2,
-                TEST_ERROR);
-
-        // another 1111 seconds pass
-        timestamp::fast_forward_seconds(1111);
-        leave_staking(someone_else, 100000);
-        assert!(coin::balance<KEK>(signer::address_of(someone_else)) ==
-                INIT_COIN + bonus_multiplier * (per_second_KEK as u64) * 1111 * 9 / 10 / 2 * 2,
-                TEST_ERROR);
-    }
-
-    #[test(creator = @MasterFrenDepolyer, new_admin = @0x99, someone_else = @0x11)]
-    #[expected_failure(abort_code = 103)]
-    public entry fun test_dao_setting_error(creator: &signer, new_admin: &signer, someone_else: &signer)
-            acquires MasterFrenData, LPInfo, Caps {
-        test_init(creator, someone_else);
-        create_account_for_test(signer::address_of(new_admin));
-        set_dao_address(new_admin, signer::address_of(new_admin));
-    }
-
-    #[test(creator = @MasterFrenDepolyer, new_admin = @0x99, someone_else = @0x11)]
-    public entry fun test_dao_setting(creator: &signer, new_admin: &signer, someone_else: &signer)
-            acquires MasterFrenData, LPInfo, PoolInfo, UserInfo, Caps, Events {
-        test_init(creator, someone_else);
-        set_bonus_multiplier(creator, 4);
-        set_per_second_KEK(creator, 111111111);
-        let bonus_multiplier;
-        let per_second_KEK;
-        {
-            let mc_data = borrow_global<MasterFrenData>(RESOURCE_ACCOUNT_ADDRESS);
-            bonus_multiplier = mc_data.bonus_multiplier;
-            per_second_KEK = mc_data.per_second_KEK;
-            assert!(bonus_multiplier == 4, TEST_ERROR);
-            assert!(per_second_KEK == 111111111, TEST_ERROR);
-        };
-        create_account_for_test(signer::address_of(new_admin));
-        set_admin_address(creator, signer::address_of(new_admin));
-        set_dao_address(new_admin, signer::address_of(new_admin));
-        set_dao_percent(new_admin, 20);
-        register_coin<KEK>(new_admin);
-
-        add<LPCoin1>(new_admin, 1000);    // 1/2
-        enter_staking(someone_else, 100000);
-        // 1111 seconds pass
-        timestamp::fast_forward_seconds(1111);
-        leave_staking(someone_else, 100000);
-
-        // user balance
-        assert!(coin::balance<KEK>(signer::address_of(someone_else)) ==
-                INIT_COIN + bonus_multiplier * (per_second_KEK as u64) * 1111 * 8 / 10 / 2,
-                TEST_ERROR);
-
-        // admin fee
-        withdraw_dao_fee();
-        assert!(coin::balance<KEK>(signer::address_of(new_admin)) ==
-                bonus_multiplier * (per_second_KEK as u64) * 1111 * 2 / 10,
-                TEST_ERROR);
-    }
-
-    #[test(deployer = @MasterFrenDepolyer)]
-    public entry fun test_resource_account(deployer: &signer) {
-        genesis::setup();
-        create_account_for_test(signer::address_of(deployer));
-        let addr = account::create_resource_address(&signer::address_of(deployer), x"CF");
-        assert!(addr == @MasterFrenResourceAccount, TEST_ERROR);
     }
 }
